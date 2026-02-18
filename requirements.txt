@@ -1,0 +1,6 @@
+pandas
+geopandas
+datetime
+requests
+bs4
+folium

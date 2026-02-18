@@ -5,17 +5,10 @@ from datetime import datetime
 import geopandas as gpd
 import folium
 
-swim_lakes = [
-    {"id": "bgwl0085", "name": "Kulkwitzer See", "lat": 51.30716868956218, "lon": 12.247896347253004},
-    {"id": "bgwm0071", "name": "Albrechtshainer See", "lat": 51.31249082838858, "lon": 12.570372341129078},
-    {"id": "bgwm0072", "name": "Moritz/Ammelshainer See", "lat": 51.29749712405867, "lon": 12.606977342144106},
-    {"id": "bwwl0092", "name": "Speicherbecken Borna", "lat": 51.11011090686556, "lon": 12.451590688757843},
-    {"id": "bwwl0101", "name": "Harthsee", "lat": 51.085874010632715, "lon": 12.54802432292868},
-    {"id": "bwwl0119", "name": "Markkleeberger See", "lat": 51.26603400515653, "lon": 12.40812975334591},
-    {"id": "bwwm0078", "name": "Spannbetonwerk See", "lat": 51.252215631525644,"lon": 12.61683371411002},
-    {"id": "bwls0088", "name": "Cospudener See", "lat": 51.26915113014249,"lon": 12.334952110757772}
-    ]
 
+swim_lakes = pd.read_csv("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/lakes.csv")
+print(swim_lakes)
+input()
 '''
 All the lakes URL: https://www.gesunde.sachsen.de/badegewaesser.html#EINSTUFUNG
 Specific quality URL = "https://www.gesunde.sachsen.de/badegewaesser-detail.html?id="
