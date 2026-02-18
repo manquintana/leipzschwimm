@@ -5,21 +5,17 @@ from datetime import datetime
 import geopandas as gpd
 import folium
 
-
-swim_lakes = pd.read_csv("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/lakes.csv")
-print(swim_lakes)
-input()
 '''
 All the lakes URL: https://www.gesunde.sachsen.de/badegewaesser.html#EINSTUFUNG
 Specific quality URL = "https://www.gesunde.sachsen.de/badegewaesser-detail.html?id="
 Problem is, this url fetches dinamically the data to display the tables > so i take the info from snippet_url instead
 '''
 
+swim_lakes = pd.read_csv("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/lakes.csv") #some of my favorite lakes in leipzsch!
 """
 DATA ADQUISITION
 ################
 """
-
 def scrap_lake_web(df_lake_info, lake_dict):
     lake_id = lake_dict["id"]
     snippet_url = f"https://www.gesunde.sachsen.de/lua/badegewaesser/{lake_id}-de-content.snippet"
@@ -52,7 +48,6 @@ for lake in swim_lakes:
     df_lake_info = scrap_lake_web(df_lake_info, lake)
     
     
-
 """
 DATA CLEANSING
 ##############
@@ -87,8 +82,6 @@ def assign_color(row):
 df_lake_info["color"] = df_lake_info.apply(assign_color, axis=1)
 
 
-
-
 """
 DATA MAPPING
 ############
@@ -114,7 +107,7 @@ legend_html = """
 </div>
 """
 
-leipzig_gdf = gpd.read_file("https://github.com/manquintana/leipzschwimm/blob/main/data/leipzig_UTM33N.json").to_crs(epsg=4326)
+leipzig_gdf = gpd.read_file("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/leipzig_UTM33N.json").to_crs(epsg=4326)
 folium.GeoJson(
      leipzig_gdf,
      name="City of Leipzig",
@@ -125,7 +118,6 @@ folium.GeoJson(
          "fillOpacity": 0.2
      }
  ).add_to(m)
-
 
 # Add lakes to map
 for _, row in lakes_gdf.iterrows():
