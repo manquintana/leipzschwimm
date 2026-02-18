@@ -121,7 +121,7 @@ legend_html = """
 </div>
 """
 
-leipzig_gdf = gpd.read_file("/content/drive/MyDrive/Cuaderno de Programacion/leipzschwimm/leipzig_UTM33N.json").to_crs(epsg=4326)
+leipzig_gdf = gpd.read_file("https://github.com/manquintana/leipzschwimm/blob/main/data/leipzig_UTM33N.json").to_crs(epsg=4326)
 folium.GeoJson(
      leipzig_gdf,
      name="City of Leipzig",
