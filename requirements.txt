@@ -1,6 +1,6 @@
-pandas
+pandas==2.2.2
 geopandas
 datetime
 requests
 bs4
-folium
+folium==0.20.0
