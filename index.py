@@ -235,4 +235,4 @@ legend = '''
 m.get_root().html.add_child(folium.Element(legend))
 
 #m #map
-m.save("render/index.html") #or save html
+m.save("index.html") #or save html
