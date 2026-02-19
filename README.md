@@ -5,4 +5,4 @@ Web scraper that takes the water quality data of the Leipzig region swimming lak
 <i>Note</i>: Right now (feb 2026) all the data is outdated because the sampling takes place only during the summer months.
 
 Check it before swimming ust clicking on the Map Preview :)
-[![Map Preview](https://manquintana.github.io/leipzschwimm/render/preview.png)](https://manquintana.github.io/leipzschwimm/render/index.html)
+[![Map Preview](https://manquintana.github.io/leipzschwimm/render/preview.png)](https://manquintana.github.io/leipzschwimm/index.html)
