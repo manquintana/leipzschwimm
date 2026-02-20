@@ -3,7 +3,7 @@ name: run index.py
 on:
   workflow_dispatch:    # allows manual test
   schedule:
-    - cron: '*/5 * * * *'  # every 5 minutes UTC
+    - cron: '0 */12 * * *'
 
 jobs:
   build:
