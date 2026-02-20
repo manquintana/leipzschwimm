@@ -1,39 +1,47 @@
 name: run index.py
 
 on:
+  # Manual trigger for testing
+  workflow_dispatch:
+  # Scheduled trigger: every 5 minutes
   schedule:
-    - cron: '*/5 * * * *' # every 5 min
+    - cron: '*/5 * * * *'  # UTC time
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+      # 1. Checkout repo content
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: checkout repo content
-        uses: actions/checkout@v2 # checkout the repository content to github runner
-
-      - name: setup python
+      # 2. Set up Python
+      - name: Set up Python 3.9
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-          
-      - name: install python packages
+
+      # 3. Install dependencies
+      - name: Install Python packages
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          
-      - name: execute py script
+
+      # 4. Run your script
+      - name: Execute index.py
         run: python index.py
-          
-      - name: commit files
+
+      # 5. Commit and push any changes safely
+      - name: Commit changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add -A
-          git diff-index --quiet HEAD || (git commit -a -m "updated logs" --allow-empty)
-          
-      - name: push changes
+          git diff-index --quiet HEAD || git commit -m "Update logs" --allow-empty
+
+      - name: Push changes
         uses: ad-m/github-push-action@v0.6.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main 
+          branch: main
