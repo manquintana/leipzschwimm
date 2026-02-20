@@ -262,7 +262,7 @@ top_legend = '''
 
 m.get_root().html.add_child(folium.Element(top_legend))
 from branca.element import Element
-footer = """
+footer = f"""
 <div style="
     position: fixed;
     bottom: 0px;
@@ -276,7 +276,7 @@ footer = """
     padding-top: 10px;
     border-top: 1px solid grey;
 ">
-    <p><b>Sachsen Lake Monitoring Dashboard | Updated Daily at 8 UTC+2</b></p>
+    <p><b>Sachsen Lake Monitoring Dashboard | Last updated at {datetime.now()}</b></p>
     <p>Maintained by <a href="https://github.com/manquintana/" target="_blank">jevi</a></p>
 </div>
 """
