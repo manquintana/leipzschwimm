@@ -81,6 +81,7 @@ df_lake_info["date"] = pd.to_datetime(df_lake_info["date"], dayfirst=True)
 
 df_lake_info = df_lake_info.sort_values("date").drop_duplicates("name", keep="last")
 
+df_lake_info["sight"] = df_lake_info["sight"].str.replace("m", "", regex=False)
 df_lake_info["sight"] = df_lake_info["sight"].str.replace(" ", "", regex=False).str.split(",").str[0]
 df_lake_info["abn"] = df_lake_info["abn"].str.replace(" ", "", regex=False)
 df_lake_info["entero"] = df_lake_info["entero"].str.replace(" ", "", regex=False).str.split(",").str[0]
@@ -109,7 +110,7 @@ def get_numeric_value(string_value):
 def assign_color(row):
   if(datetime.now() - row["date"]).days > 30:
       return "#ffff00" #yellow
-  elif (get_numeric_value(row["entero"]) <= 700 and get_numeric_value(row["coli"]) <= 1800 and row["abn"].lower() == "nein"):
+  elif (get_numeric_value(row["entero"]) <= 700 and get_numeric_value(row["coli"]) <= 1800 and row["abn"].lower() == "nein" and row["micro"] == ""):
       return "#66ff99" #green
   else:
       return "#ff3333" #red
