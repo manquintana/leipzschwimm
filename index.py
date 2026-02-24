@@ -83,10 +83,10 @@ df_lake_info = df_lake_info.sort_values("date").drop_duplicates("name", keep="la
 
 df_lake_info["sight"] = df_lake_info["sight"].str.replace("m", "", regex=False)
 df_lake_info["sight"] = df_lake_info["sight"].str.replace(" ", "", regex=False).str.split(",").str[0]
-df_lake_info["abn"] = df_lake_info["abn"].str.replace(" ", "", regex=False)
+#df_lake_info["abn"] = df_lake_info["abn"].str.replace(" ", "", regex=False)
 df_lake_info["entero"] = df_lake_info["entero"].str.replace(" ", "", regex=False).str.split(",").str[0]
 df_lake_info["coli"] = df_lake_info["coli"].str.replace(" ", "", regex=False).str.split(",").str[0]
-df_lake_info["micro"] = df_lake_info["micro"].str.replace(" ", "", regex=False)
+#df_lake_info["micro"] = df_lake_info["micro"].str.replace(" ", "", regex=False)
 
 """
 color ref:
@@ -217,6 +217,10 @@ for index, row in lakes_gdf.iterrows():
               <td style="color:{row['color']}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-circle-fill" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8"/></svg></td>
           </tr>
           <tr>
+              <td><b>Lake historic data (external link)</b></td>
+              <td><a style="color:#000;" href="https://www.gesunde.sachsen.de/badegewaesser-detail.html?id={row['id']}" target="_blank"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-spreadsheet-fill" viewBox="0 0 16 16">  <path d="M6 12v-2h3v2z"/>  <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M3 9h10v1h-3v2h3v1h-3v2H9v-2H6v2H5v-2H3v-1h2v-2H3z"/></svg></a></td>
+          </tr>
+          <tr>
               <td><b>Reference values (external link)</b></td>
               <td><a style="color:#000;" href="https://www.gesunde.sachsen.de/badegewaesser.html#EINSTUFUNG" target="_blank"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle-fill" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247m2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.01.927z"/></svg></a></td>
           </tr>
@@ -277,8 +281,7 @@ footer = f"""
     padding-top: 10px;
     border-top: 1px solid grey;
 ">
-    <p><b>Sachsen Lake Monitoring Dashboard | Last updated at {datetime.now()}</b></p>
-    <p>Maintained by <a href="https://github.com/manquintana/" target="_blank">jevi</a></p>
+    <p><b>Sachsen Lake Monitoring Dashboard | Last updated at {datetime.now().strftime("%Y-%m-%d %H:%M")}</b> /// Maintained by <a href="https://github.com/manquintana/" target="_blank">jevi</a></p>
 </div>
 """
 m.get_root().html.add_child(Element(footer))
