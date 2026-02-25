@@ -3,7 +3,7 @@ branca==0.8.2
 bs4==0.0.2
 certifi==2026.2.25
 charset-normalizer==3.4.4
-DateTime==6.0
+DateTime==5.5
 folium==0.20.0
 geopandas==1.1.2
 idna==3.11
