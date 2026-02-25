@@ -28,12 +28,12 @@ def scrap_lake_web(df_lake_info, lake):
 
     tables = soup.find_all("table")
     if len(tables) > 1: # usually is 2 tables (Vorort and Labor) but sometimes they have multiple extraction points, which makes thing hard to scrap... I will take the first two tables in this case
-        #get data from table 1 (Observations)
+        # get data from table 1 (Observations)
         for row in tables[0].tbody.find_all("tr"):
             columns = row.find_all("td")
             table_dict = {"id": lake["id"], "name": lake["name"], "lat": lake["lat"], "lon": lake["lon"], "location": lake["location"], "date": columns[0].text, "abn": columns[1].text, "sight": columns[2].text}
             df_lake_info.loc[len(df_lake_info)] = table_dict
-        #get data from table 2 (Laboratory)
+        # get data from table 2 (Laboratory)
         for row in tables[1].tbody.find_all("tr"):
             columns = row.find_all("td")
             table_df = pd.DataFrame({"date": [columns[0].text], "entero": [columns[1].text], "coli": [columns[2].text], "micro": [columns[3].text]}).astype({
@@ -44,7 +44,9 @@ def scrap_lake_web(df_lake_info, lake):
             })
             df_lake_info.set_index("date", inplace=True)
             table_df.set_index("date", inplace=True)
-            df_lake_info.update(table_df)
+            # workaround to avoid FutureWarning when trying to assign strings and floats to df
+            df_lake_info.update(table_df[table_df.columns])
+            #df_lake_info.update(table_df)
             df_lake_info.reset_index(inplace=True)
     else:
         error_code = f" > information not available for lake {lake['name']}! the web has no data: {snippet_url}"
