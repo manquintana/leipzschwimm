@@ -12,7 +12,7 @@ Specific quality URL = "https://www.gesunde.sachsen.de/badegewaesser-detail.html
 Problem is, this url fetches dinamically the data to display the tables > so i take the info from snippet_url instead
 '''
 
-swim_lakes = pd.read_csv("data/lakes.csv") #some of my favorite lakes in leipzsch!
+swim_lakes = pd.read_csv("data/lakes.csv") #--some-of-my-favorite-lakes-in-leipzsch!-- Now it has all the lakes in Sachsen
 
 
 """
@@ -88,6 +88,14 @@ df_lake_info["entero"] = df_lake_info["entero"].str.replace(" ", "", regex=False
 df_lake_info["coli"] = df_lake_info["coli"].str.replace(" ", "", regex=False).str.split(",").str[0]
 #df_lake_info["micro"] = df_lake_info["micro"].str.replace(" ", "", regex=False)
 
+# rename locations to have the same name as the NUTS_RG_01M_2021_4326_LEVL_3_Sachsen dataset
+df_lake_info["location"] = df_lake_info["location"].str.replace("Leipzig, Stadt", "Leipzig, Kreisfreie Stadt", regex=False)
+df_lake_info["location"] = df_lake_info["location"].str.replace("Leipzig, Landkreis", "Leipzig", regex=False)
+df_lake_info["location"] = df_lake_info["location"].str.replace("Chemnitz, Stadt", "Chemnitz, Kreisfreie Stadt", regex=False)
+df_lake_info["location"] = df_lake_info["location"].str.replace("Dresden, Stadt", "Dresden, Kreisfreie Stadt", regex=False)
+
+
+
 """
 color ref:
 yellow =  outdated, more than 1 month since last sample
@@ -134,41 +142,44 @@ m = folium.Map(
     tiles="CartoDB positron"
 )
 
-'''
-folium.TileLayer(
-    "OpenStreetMap",
-    name="OSM",
-    attr="who knows"
-).add_to(m)
+# full_map = gpd.read_file("data/NUTS_RG_01M_2021_4326_LEVL_3.json") # execute just once to reduce the original dataset to just sachsen 160k vs 27MB
+# sachsen_nuts3 = full_map[full_map["NUTS_ID"].str.startswith("DED")] # execute just once -- filter to only Sachsen regions (NUTS3 codes start with DED)
+# sachsen_nuts3.to_file("data/NUTS_RG_01M_2021_4326_LEVL_3_Sachsen.json", driver="GeoJSON")
+sachsen_gdf = gpd.read_file("data/NUTS_RG_01M_2021_4326_LEVL_3_Sachsen.json")
+sachsen_gdf = sachsen_gdf.rename(columns={"NUTS_NAME": "Region"})
 
-# Stamen Terrain
-folium.TileLayer(
-    "Stamen Terrain",
-    name="Terrain",
-    attr="who knows"
-).add_to(m)
+#Map regions for every lake in dataset
+locations = df_lake_info["location"].unique()
+map_regions = sachsen_gdf["Region"].unique()
+for location in locations:
+    folium.GeoJson(
+        sachsen_gdf[sachsen_gdf["Region"] == location],
+        name=f"{location}",
+        style_function=lambda feature: { 
+            "fillColor": "lightblue",
+            "color": "grey",
+            "weight": 1,
+            "fillOpacity": 0.4
+        },
+        highlight_function=lambda feature: {
+            "weight": 1,
+            "color": "black",
+            "fillOpacity": 0.6
+        },
+        tooltip=folium.GeoJsonTooltip(fields=["Region"])
+    ).add_to(m)
 
-# CartoDB Positron
-folium.TileLayer(
-    "stamenwatercolor",
-    name="Light",
-    attr="who knows"
-).add_to(m)
-'''
-
-leipzig_gdf = gpd.read_file("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/leipzig_UTM33N.json").to_crs(epsg=4326)
-folium.GeoJson(
-     leipzig_gdf,
-     name="City of Leipzig",
-     style_function=lambda x: {
-         "fillColor": "lightgreen",
-         "color": "grey",
-         "weight": 1,
-         "fillOpacity": 0.2
-     }
- ).add_to(m)
- 
-
+# folium.GeoJson(
+    # sachsen_gdf,
+    # name="Sachsen",
+    # style_function=lambda feature: {
+        # "fillColor": "lightblue",
+        # "color": "grey",
+        # "weight": 2,
+        # "fillOpacity": 0
+    # },
+    # tooltip=folium.GeoJsonTooltip(fields=["Region"])
+# ).add_to(m)
 
 # Add lakes to map
 for index, row in lakes_gdf.iterrows():
@@ -255,11 +266,13 @@ top_legend = '''
   <path fill="#0099ff" fill-opacity="0.7" d="M0,32L8.3,74.7C16.6,117,33,203,50,224C66.2,245,83,203,99,176C115.9,149,132,139,149,160C165.5,181,182,235,199,261.3C215.2,288,232,288,248,293.3C264.8,299,281,309,298,266.7C314.5,224,331,128,348,96C364.1,64,381,96,397,101.3C413.8,107,430,85,447,69.3C463.4,53,480,43,497,69.3C513.1,96,530,160,546,186.7C562.8,213,579,203,596,165.3C612.4,128,629,64,646,69.3C662.1,75,679,149,695,186.7C711.7,224,728,224,745,208C761.4,192,778,160,794,165.3C811,171,828,213,844,218.7C860.7,224,877,192,894,181.3C910.3,171,927,181,943,181.3C960,181,977,171,993,176C1009.7,181,1026,203,1043,224C1059.3,245,1076,267,1092,277.3C1109,288,1126,288,1142,277.3C1158.6,267,1175,245,1192,240C1208.3,235,1225,245,1241,218.7C1257.9,192,1274,128,1291,128C1307.6,128,1324,192,1341,224C1357.2,256,1374,256,1390,224C1406.9,192,1423,128,1432,96L1440,64L1440,0L1431.7,0C1423.4,0,1407,0,1390,0C1373.8,0,1357,0,1341,0C1324.1,0,1308,0,1291,0C1274.5,0,1258,0,1241,0C1224.8,0,1208,0,1192,0C1175.2,0,1159,0,1142,0C1125.5,0,1109,0,1092,0C1075.9,0,1059,0,1043,0C1026.2,0,1010,0,993,0C976.6,0,960,0,943,0C926.9,0,910,0,894,0C877.2,0,861,0,844,0C827.6,0,811,0,794,0C777.9,0,761,0,745,0C728.3,0,712,0,695,0C678.6,0,662,0,646,0C629,0,612,0,596,0C579.3,0,563,0,546,0C529.7,0,513,0,497,0C480,0,463,0,447,0C430.3,0,414,0,397,0C380.7,0,364,0,348,0C331,0,314,0,298,0C281.4,0,265,0,248,0C231.7,0,215,0,199,0C182.1,0,166,0,149,0C132.4,0,116,0,99,0C82.8,0,66,0,50,0C33.1,0,17,0,8,0L0,0Z"></path>
 </svg>
 <h2 style="margin-bottom:5px;position: relative; z-index: 1;">Sachsen Lake Monitoring</h2>
-<div style="position: relative; z-index: 1; background-color:#0099ff; border-radius:10px; display:block; width:80%; display:block; margin-left:auto; margin-right:auto;">
-  <span style="color:green;">⬤</span> <i style="margin-right:15px;color:#fff">Good water quality</i>
-  <span style="color:yellow;">⬤</span> <i style="margin-right:15px;color:#fff">Last sample Outdated (taken more than 1 month ago)</i>
-  <span style="color:red;">⬤</span> <i style="color:#fff">Problem reported. Do not swim!</i>
-</div>
+<!--
+    <div style="position: relative; z-index: 1; background-color:#0099ff; border-radius:10px; display:block; width:80%; display:block; margin-left:auto; margin-right:auto;">
+        <span style="color:green;">⬤</span> <i style="margin-right:15px;color:#fff">Good water quality</i>
+        <span style="color:yellow;">⬤</span> <i style="margin-right:15px;color:#fff">Last sample Outdated (taken more than 1 month ago)</i>
+        <span style="color:red;">⬤</span> <i style="color:#fff">Problem reported. Do not swim!</i>
+    </div>
+-->
 
 
 </div>
@@ -270,6 +283,24 @@ from branca.element import Element
 footer = f"""
 <div style="
     position: fixed;
+    bottom: 20px;
+    top: 20px
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background-color: #0099ff;
+    z-index: 9999;
+    font-size: 16px;
+    padding: 0;
+    text-align: center;
+">
+    <b style="margin-right:15px;color:#fff">References </b>
+    <span style="color:green;">⬤</span> <i style="margin-right:15px;color:#fff">Good water quality</i>
+    <span style="color:yellow;">⬤</span> <i style="margin-right:15px;color:#fff">Last sample Outdated (taken more than 1 month ago)</i>
+    <span style="color:red;">⬤</span> <i style="color:#fff">Problem reported. Do not swim!</i>
+</div>
+<div style="
+position: fixed;
     bottom: 0px;
     left: 0px;
     width: 100%;
@@ -277,11 +308,20 @@ footer = f"""
     background-color: white;
     z-index: 9999;
     font-size: 14px;
-    padding-left: 10px;
-    padding-top: 10px;
+    padding: 10px;
     border-top: 1px solid grey;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 ">
-    <p><b>Sachsen Lake Monitoring Dashboard | Last updated at {datetime.now().strftime("%Y-%m-%d %H:%M")}</b> /// Maintained by <a href="https://github.com/manquintana/" target="_blank">jevi</a></p>
+    <div>
+        <b>Sachsen Lake Monitoring Dashboard </b><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#0099ff" class="bi bi-droplet-fill" viewBox="0 0 16 16"><path d="M8 16a6 6 0 0 0 6-6c0-1.655-1.122-2.904-2.432-4.362C10.254 4.176 8.75 2.503 8 0c0 0-6 5.686-6 10a6 6 0 0 0 6 6M6.646 4.646l.708.708c-.29.29-1.128 1.311-1.907 2.87l-.894-.448c.82-1.641 1.717-2.753 2.093-3.13"/></svg> 
+         # of lakes listed: {len(df_lake_info)} <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#0099ff" class="bi bi-droplet-fill" viewBox="0 0 16 16"><path d="M8 16a6 6 0 0 0 6-6c0-1.655-1.122-2.904-2.432-4.362C10.254 4.176 8.75 2.503 8 0c0 0-6 5.686-6 10a6 6 0 0 0 6 6M6.646 4.646l.708.708c-.29.29-1.128 1.311-1.907 2.87l-.894-.448c.82-1.641 1.717-2.753 2.093-3.13"/></svg> 
+         Last updated at {datetime.now().strftime("%Y-%m-%d %H:%M")} 
+    </div>
+    <div>
+        Maintained by <a href="https://github.com/manquintana/" target="_blank">jevi</a>
+    </div>
 </div>
 """
 m.get_root().html.add_child(Element(footer))
