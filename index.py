@@ -14,7 +14,7 @@ Specific quality URL = "https://www.gesunde.sachsen.de/badegewaesser-detail.html
 Problem is, this url fetches dinamically the data to display the tables > so i take the info from snippet_url instead
 '''
 
-swim_lakes = pd.read_csv("data/lakes.csv") #--some-of-my-favorite-lakes-in-leipzsch!-- Now it has all the lakes in Sachsen
+swim_lakes = pd.read_csv("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/lakes.csv") #--some-of-my-favorite-lakes-in-leipzsch!-- Now it has all the lakes in Sachsen
 
 """
 DATA ADQUISITION
@@ -28,29 +28,65 @@ def scrap_lake_web(df_lake_info, lake):
 
     tables = soup.find_all("table")
     if len(tables) > 1: # usually is 2 tables (Vorort and Labor) but sometimes they have multiple extraction points, which makes thing hard to scrap... I will take the first two tables in this case
+        
         # get data from table 1 (Observations)
+        obs_data = []
         for row in tables[0].tbody.find_all("tr"):
-            columns = row.find_all("td")
-            table_dict = {"id": lake["id"], "name": lake["name"], "lat": lake["lat"], "lon": lake["lon"], "location": lake["location"], "date": columns[0].text, "abn": columns[1].text, "sight": columns[2].text}
-            df_lake_info.loc[len(df_lake_info)] = table_dict
-        # get data from table 2 (Laboratory)
-        for row in tables[1].tbody.find_all("tr"):
-            columns = row.find_all("td")
-            table_df = pd.DataFrame({"date": [columns[0].text], "entero": [columns[1].text], "coli": [columns[2].text], "micro": [columns[3].text]}).astype({
-            "date": "string",
-            "entero": "string",
-            "coli": "string",
-            "micro": "string"
+            cols = row.find_all("td")
+            obs_data.append({
+                "date": cols[0].text,
+                "abn": cols[1].text,
+                "sight": cols[2].text
             })
-            df_lake_info.set_index("date", inplace=True)
-            table_df.set_index("date", inplace=True)
-            # workaround to avoid FutureWarning when trying to assign strings and floats to df
-            df_lake_info.update(table_df[table_df.columns])
-            #df_lake_info.update(table_df)
-            df_lake_info.reset_index(inplace=True)
+        obs_df = pd.DataFrame(obs_data)
+       
+        # get data from table 2 (Laboratory)
+        lab_data = []
+        for row in tables[1].tbody.find_all("tr"):
+            cols = row.find_all("td")
+            lab_data.append({
+                "date": cols[0].text.strip(),
+                "entero": cols[1].text.strip(),
+                "coli": cols[2].text.strip(),
+                "micro": cols[3].text.strip()
+            })
+        lab_df = pd.DataFrame(lab_data)
+        
+        #performance improvement, i will merge this two small df and keep only latest Date before appending to df_lake_info
+        merged = pd.merge(obs_df, lab_df, on="date", how="inner")
+        merged["date"] = pd.to_datetime(merged["date"], dayfirst=True)
+        latest = merged.sort_values("date").iloc[-1]
+        df_lake_info.loc[len(df_lake_info)] = {
+            "id": lake["id"],
+            "name": lake["name"],
+            "lat": lake["lat"],
+            "lon": lake["lon"],
+            "location": lake["location"],
+            "date": latest["date"],
+            "abn": latest["abn"],
+            "sight": latest["sight"],
+            "entero": latest["entero"],
+            "coli": latest["coli"],
+            "micro": latest["micro"]
+        }
+
     else:
         error_code = f" > information not available for lake {lake['name']}! the web has no data: {snippet_url}"
         print(error_code)
+        df_lake_info.loc[len(df_lake_info)] = {
+            "id": lake["id"],
+            "name": lake["name"],
+            "lat": lake["lat"],
+            "lon": lake["lon"],
+            "location": lake["location"],
+            "date": pd.NaT,
+            "abn": pd.NA,
+            "sight": pd.NA,
+            "entero": pd.NA,
+            "coli": pd.NA,
+            "micro": ""
+        }
+        
     print(f">> retrieved info for lake: {lake['name']}")
     return df_lake_info
 
@@ -80,9 +116,10 @@ DATA CLEANSING
 
 #df_lake_info = df_lake_info[df_lake_info["name"] != "Harthsee"]
 
-df_lake_info["date"] = pd.to_datetime(df_lake_info["date"], dayfirst=True)
+df_lake_info["date"] = df_lake_info["date"].apply(lambda d: d.strftime("%Y-%m-%d") if not pd.isna(d) else pd.NaT)
 
-df_lake_info = df_lake_info.sort_values("date").drop_duplicates("name", keep="last")
+# i did this before in scrap_lake_web before appending
+#df_lake_info = df_lake_info.sort_values("date").drop_duplicates("name", keep="last")
 
 df_lake_info["sight"] = df_lake_info["sight"].str.replace("m", "", regex=False)
 df_lake_info["sight"] = df_lake_info["sight"].str.replace(" ", "", regex=False).str.split(",").str[0]
@@ -97,6 +134,7 @@ df_lake_info["location"] = df_lake_info["location"].str.replace("Leipzig, Landkr
 df_lake_info["location"] = df_lake_info["location"].str.replace("Chemnitz, Stadt", "Chemnitz, Kreisfreie Stadt", regex=False)
 df_lake_info["location"] = df_lake_info["location"].str.replace("Dresden, Stadt", "Dresden, Kreisfreie Stadt", regex=False)
 
+
 """
 color ref:
 yellow =  outdated, more than 1 month since last sample
@@ -109,7 +147,9 @@ def get_numeric_value(string_value):
     return int(string_value)
   except ValueError:
     print("not a number")
-    if string_value[0] == "<":
+    if pd.isna(string_value):
+        return pd.NA
+    elif string_value[0] == "<":
       return int(re.sub(r"\D", "", string_value))
     elif(string_value[0] == ">"):
       return int(re.sub(r"\D", "", string_value)) + 1
@@ -117,9 +157,11 @@ def get_numeric_value(string_value):
       return "error_in_data"
 
 def assign_color(row):
-  if(datetime.now() - row["date"]).days > 30:
+  if(pd.isna(row["date"])):
+    return "#ff3333" #red if there is no data (date is null)
+  elif( (datetime.now() - pd.to_datetime(row["date"])).days > 30):
       return "#ffff00" #yellow
-  elif (get_numeric_value(row["entero"]) <= 700 and get_numeric_value(row["coli"]) <= 1800 and row["abn"].lower() == "nein" and row["micro"] == ""):
+  elif(get_numeric_value(row["entero"]) <= 700 and get_numeric_value(row["coli"]) <= 1800 and row["abn"].lower() == "nein" and row["micro"] == ""):
       return "#66ff99" #green
   else:
       return "#ff3333" #red
@@ -201,7 +243,7 @@ for index, row in lakes_gdf.iterrows():
           </tr>
           <tr>
               <td><b>Last sample</b></td>
-              <td>{row["date"].strftime("%Y-%m-%d")}</td>
+              <td>{row["date"]}</td>
           </tr>
           <tr>
               <td><b>Sight [m]</b></td>
