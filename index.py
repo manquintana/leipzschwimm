@@ -5,8 +5,14 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from datetime import datetime
 import geopandas as gpd
+
+import openmeteo_requests
+import requests_cache
+from retry_requests import retry
+
 import folium
 import re
+
 
 '''
 All the lakes URL: https://www.gesunde.sachsen.de/badegewaesser.html#EINSTUFUNG
@@ -15,11 +21,42 @@ Problem is, this url fetches dinamically the data to display the tables > so i t
 '''
 
 swim_lakes = pd.read_csv("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/lakes.csv") #--some-of-my-favorite-lakes-in-leipzsch!-- Now it has all the lakes in Sachsen
+weather_codes = pd.read_csv("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/weather_codes", sep = ";", skiprows = 19, names = ["codes", "svg"])
 
 """
 DATA ADQUISITION
 ################
 """
+def get_weather(latitude, longitude):
+    # Setup the Open-Meteo API client with cache and retry on error
+    cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
+    retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
+    openmeteo = openmeteo_requests.Client(session = retry_session)
+
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+    	"latitude": latitude,
+    	"longitude": longitude,
+    	"daily": ["temperature_2m_max", "weather_code"],
+    	"timezone": "Europe/Berlin",
+    	"forecast_days": 1,
+    }
+    responses = openmeteo.weather_api(url, params = params)
+
+    # Process first location. Add a for-loop for multiple locations or weather models
+    response = responses[0]
+
+    # Process daily data. The order of variables needs to be the same as requested.
+    daily = response.Daily()
+    daily_temperature_2m_max = daily.Variables(0).ValuesAsNumpy()
+    daily_weather_code = daily.Variables(1).ValuesAsNumpy()
+    max_temp = int(daily_temperature_2m_max[0])
+    w_code = int(daily_weather_code[0])
+
+    print(f"Lat: {latitude} / Lon: {longitude} / Max Temp(°C): {max_temp} / Weather code: {w_code}")
+    return max_temp, w_code
+
+
 def scrap_lake_web(df_lake_info, lake):
     snippet_url = f"https://www.gesunde.sachsen.de/lua/badegewaesser/{lake['id']}-de-content.snippet"
     print(f"> retrieving info for lake: {lake['id']}")
@@ -28,7 +65,7 @@ def scrap_lake_web(df_lake_info, lake):
 
     tables = soup.find_all("table")
     if len(tables) > 1: # usually is 2 tables (Vorort and Labor) but sometimes they have multiple extraction points, which makes thing hard to scrap... I will take the first two tables in this case
-        
+
         # get data from table 1 (Observations)
         obs_data = []
         for row in tables[0].tbody.find_all("tr"):
@@ -39,7 +76,7 @@ def scrap_lake_web(df_lake_info, lake):
                 "sight": cols[2].text
             })
         obs_df = pd.DataFrame(obs_data)
-       
+
         # get data from table 2 (Laboratory)
         lab_data = []
         for row in tables[1].tbody.find_all("tr"):
@@ -51,7 +88,10 @@ def scrap_lake_web(df_lake_info, lake):
                 "micro": cols[3].text.strip()
             })
         lab_df = pd.DataFrame(lab_data)
-        
+
+        # get meteorology data from open-meteo
+        max_temp, w_code = get_weather(lake["lat"], lake["lon"])
+
         #performance improvement, i will merge this two small df and keep only latest Date before appending to df_lake_info
         merged = pd.merge(obs_df, lab_df, on="date", how="inner")
         merged["date"] = pd.to_datetime(merged["date"], dayfirst=True)
@@ -67,12 +107,15 @@ def scrap_lake_web(df_lake_info, lake):
             "sight": latest["sight"],
             "entero": latest["entero"],
             "coli": latest["coli"],
-            "micro": latest["micro"]
+            "micro": latest["micro"],
+            "max_temp": max_temp,
+            "w_code": w_code
         }
 
     else:
         error_code = f" > information not available for lake {lake['name']}! the web has no data: {snippet_url}"
         print(error_code)
+        max_temp, w_code = get_weather(lake["lat"], lake["lon"]) # anyway i retrieve the weather data
         df_lake_info.loc[len(df_lake_info)] = {
             "id": lake["id"],
             "name": lake["name"],
@@ -84,13 +127,16 @@ def scrap_lake_web(df_lake_info, lake):
             "sight": pd.NA,
             "entero": pd.NA,
             "coli": pd.NA,
-            "micro": ""
+            "micro": "",
+            "max_temp": max_temp,
+            "w_code": w_code
         }
-        
+
     print(f">> retrieved info for lake: {lake['name']}")
     return df_lake_info
 
-df_lake_info = pd.DataFrame(columns=["id", "name", "lat", "lon", "location", "date", "abn", "sight", "entero", "coli", "micro"]).astype({
+
+df_lake_info = pd.DataFrame(columns=["id", "name", "lat", "lon", "location", "date", "abn", "sight", "entero", "coli", "micro", "max_temp", "w_code"]).astype({
     "id": "string",
     "name": "string",
     "lat": "float",
@@ -101,7 +147,9 @@ df_lake_info = pd.DataFrame(columns=["id", "name", "lat", "lon", "location", "da
     "sight": "string",
     "entero": "string",
     "coli": "string",
-    "micro": "string"
+    "micro": "string",
+    "max_temp": "int",
+    "w_code": "int"
 })
 for index, lake in swim_lakes.iterrows():
     df_lake_info = scrap_lake_web(df_lake_info, lake)
@@ -223,6 +271,14 @@ for location in locations:
     # tooltip=folium.GeoJsonTooltip(fields=["Region"])
 # ).add_to(m)
 
+def set_weather_code(code):
+    code = str(code)
+    for _, row in weather_codes.iterrows():
+        if code in row["codes"].split(","):
+            return row["svg"]
+    # if not found return cloud with question mark
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-question-fill" viewBox="0 0 16 16"> <path d="M5.933.87a2.89 2.89 0 0 1 4.134 0l.622.638.89-.011a2.89 2.89 0 0 1 2.924 2.924l-.01.89.636.622a2.89 2.89 0 0 1 0 4.134l-.637.622.011.89a2.89 2.89 0 0 1-2.924 2.924l-.89-.01-.622.636a2.89 2.89 0 0 1-4.134 0l-.622-.637-.89.011a2.89 2.89 0 0 1-2.924-2.924l.01-.89-.636-.622a2.89 2.89 0 0 1 0-4.134l.637-.622-.011-.89a2.89 2.89 0 0 1 2.924-2.924l.89.01zM7.002 11a1 1 0 1 0 2 0 1 1 0 0 0-2 0m1.602-2.027c.04-.534.198-.815.846-1.26.674-.475 1.05-1.09 1.05-1.986 0-1.325-.92-2.227-2.262-2.227-1.02 0-1.792.492-2.1 1.29A1.7 1.7 0 0 0 6 5.48c0 .393.203.64.545.64.272 0 .455-.147.564-.51.158-.592.525-.915 1.074-.915.61 0 1.03.446 1.03 1.084 0 .563-.208.885-.822 1.325-.619.433-.926.914-.926 1.64v.111c0 .428.208.745.585.745.336 0 .504-.24.554-.627"/></svg>'
+
 # Add lakes to map
 for index, row in lakes_gdf.iterrows():
     folium.CircleMarker(
@@ -240,6 +296,14 @@ for index, row in lakes_gdf.iterrows():
               <th colspan="2" style="text-align:center; font-size:16px; background-color:{row["color"]}">
                   {row["name"]} - <a style="color:#000;" href="https://www.google.com/maps/search/{row["lat"]},{row["lon"]}" target="_blank"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-map-fill" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.598-.49L10.5.99 5.598.01a.5.5 0 0 0-.196 0l-5 1A.5.5 0 0 0 0 1.5v14a.5.5 0 0 0 .598.49l4.902-.98 4.902.98a.5.5 0 0 0 .196 0l5-1A.5.5 0 0 0 16 14.5zM5 14.09V1.11l.5-.1.5.1v12.98l-.402-.08a.5.5 0 0 0-.196 0zm5 .8V1.91l.402.08a.5.5 0 0 0 .196 0L11 1.91v12.98l-.5.1z"/></svg></a>
               </th>
+          </tr>
+          <tr>
+              <td><b>Max Temperature today</b></td>
+              <td>{row["max_temp"]}°C</td>
+          </tr>
+          <tr>
+              <td><b>Weather code</b></td>
+              <td>{set_weather_code(row["w_code"])}</td>
           </tr>
           <tr>
               <td><b>Last sample</b></td>
