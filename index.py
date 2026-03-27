@@ -112,7 +112,6 @@ def scrap_lake_web(df_lake_info, lake):
             "max_temp": max_temp,
             "w_code": w_code
         }
-
     else:
         error_code = f" > information not available for lake {lake['name']}! the web has no data: {snippet_url}"
         print(error_code)
@@ -124,11 +123,11 @@ def scrap_lake_web(df_lake_info, lake):
             "lon": lake["lon"],
             "location": lake["location"],
             "date": pd.NaT,
-            "abn": pd.NA,
-            "sight": pd.NA,
-            "entero": pd.NA,
-            "coli": pd.NA,
-            "micro": "",
+            "abn": "no-data", #pd.NA,
+            "sight": "no-data", #pd.NA,
+            "entero": "no-data", #pd.NA,
+            "coli": "no-data", #pd.NA,
+            "micro": "no-data",
             "max_temp": max_temp,
             "w_code": w_code
         }
@@ -207,7 +206,7 @@ def get_numeric_value(string_value):
 
 def assign_color(row):
   if(pd.isna(row["date"])):
-    return "#ff3333" #red if there is no data (date is null)
+    return "#ff3333" #red if there is no data
   elif( (datetime.now() - pd.to_datetime(row["date"])).days > 30):
       return "#ffff00" #yellow
   elif(get_numeric_value(row["entero"]) <= 700 and get_numeric_value(row["coli"]) <= 1800 and row["abn"].lower() == "nein" and row["micro"] == ""):
@@ -280,7 +279,6 @@ def set_weather_code(code):
     # if not found return cloud with question mark
     return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-question-fill" viewBox="0 0 16 16"> <path d="M5.933.87a2.89 2.89 0 0 1 4.134 0l.622.638.89-.011a2.89 2.89 0 0 1 2.924 2.924l-.01.89.636.622a2.89 2.89 0 0 1 0 4.134l-.637.622.011.89a2.89 2.89 0 0 1-2.924 2.924l-.89-.01-.622.636a2.89 2.89 0 0 1-4.134 0l-.622-.637-.89.011a2.89 2.89 0 0 1-2.924-2.924l.01-.89-.636-.622a2.89 2.89 0 0 1 0-4.134l.637-.622-.011-.89a2.89 2.89 0 0 1 2.924-2.924l.89.01zM7.002 11a1 1 0 1 0 2 0 1 1 0 0 0-2 0m1.602-2.027c.04-.534.198-.815.846-1.26.674-.475 1.05-1.09 1.05-1.986 0-1.325-.92-2.227-2.262-2.227-1.02 0-1.792.492-2.1 1.29A1.7 1.7 0 0 0 6 5.48c0 .393.203.64.545.64.272 0 .455-.147.564-.51.158-.592.525-.915 1.074-.915.61 0 1.03.446 1.03 1.084 0 .563-.208.885-.822 1.325-.619.433-.926.914-.926 1.64v.111c0 .428.208.745.585.745.336 0 .504-.24.554-.627"/></svg>'
 
-
 # Weather codes floating button
 table_html = '<table border="1" style="border-collapse:collapse; width:100%;">'
 # table_html += '<tr><th>Code</th><th>Description</th></tr>'
@@ -342,7 +340,6 @@ html = f"""
 """
 floating_element = Element(html)
 m.get_root().html.add_child(floating_element)
-
 
 # Add lakes to map
 for index, row in lakes_gdf.iterrows():
