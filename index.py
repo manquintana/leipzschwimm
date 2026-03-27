@@ -334,7 +334,7 @@ html = f"""
             ✖
         </button>
     </div>
-    <h3>Weather Codes</h3>
+    <h3 style="text-align: center;">Weather Codes</h3>
     {table_html}
 </div>
 """
