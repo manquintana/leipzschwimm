@@ -454,8 +454,8 @@ footer = f"""
 ">
     <b style="margin-right:15px;color:#fff">References </b>
     <span style="color:green;">⬤</span> <i style="margin-right:15px;color:#fff">Good water quality</i>
-    <span style="color:yellow;">⬤</span> <i style="margin-right:15px;color:#fff">Last sample Outdated (taken more than 1 month ago)</i>
-    <span style="color:red;">⬤</span> <i style="color:#fff">Problem reported. Do not swim!</i>
+    <span style="color:yellow;">⬤</span> <i style="margin-right:15px;color:#fff">Last sample outdated (taken longer than 1 month ago)</i>
+    <span style="color:red;">⬤</span> <i style="color:#fff">Problem reported or no data published. Do not swim!</i>
 </div>
 <div style="
 position: fixed;
