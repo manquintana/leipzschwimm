@@ -5,6 +5,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from datetime import datetime
 import geopandas as gpd
+from branca.element import Element
 
 import openmeteo_requests
 import requests_cache
@@ -21,7 +22,7 @@ Problem is, this url fetches dinamically the data to display the tables > so i t
 '''
 
 swim_lakes = pd.read_csv("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/lakes.csv") #--some-of-my-favorite-lakes-in-leipzsch!-- Now it has all the lakes in Sachsen
-weather_codes = pd.read_csv("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/weather_codes", sep = ";", skiprows = 19, names = ["codes", "svg"])
+weather_codes = pd.read_csv("https://raw.githubusercontent.com/manquintana/leipzschwimm/refs/heads/main/data/weather_codes.csv", sep = ";", skiprows = 2, nrows = 13,  names = ["code", "description", "icon"])
 
 """
 DATA ADQUISITION
@@ -223,21 +224,21 @@ DATA MAPPING
 """
 lakes_gdf = gpd.GeoDataFrame(
     df_lake_info,
-    geometry=gpd.points_from_xy(df_lake_info["lon"], df_lake_info["lat"]),
+    geometry = gpd.points_from_xy(df_lake_info["lon"], df_lake_info["lat"]),
     crs="EPSG:4326"
 )
 
 m = folium.Map(
-    location=[lakes_gdf["lat"].mean(), lakes_gdf["lon"].mean()],
-    zoom_start=9,
-    tiles="CartoDB positron"
+    location = [lakes_gdf["lat"].mean(), lakes_gdf["lon"].mean()],
+    zoom_start = 9,
+    tiles = "CartoDB positron"
 )
 
 # full_map = gpd.read_file("data/NUTS_RG_01M_2021_4326_LEVL_3.json") # execute just once to reduce the original dataset to just sachsen 160k vs 27MB
 # sachsen_nuts3 = full_map[full_map["NUTS_ID"].str.startswith("DED")] # execute just once -- filter to only Sachsen regions (NUTS3 codes start with DED)
 # sachsen_nuts3.to_file("data/NUTS_RG_01M_2021_4326_LEVL_3_Sachsen.json", driver="GeoJSON")
 sachsen_gdf = gpd.read_file("data/NUTS_RG_01M_2021_4326_LEVL_3_Sachsen.json")
-sachsen_gdf = sachsen_gdf.rename(columns={"NUTS_NAME": "Region"})
+sachsen_gdf = sachsen_gdf.rename(columns = {"NUTS_NAME": "Region"})
 
 #Map regions for every lake in dataset
 locations = df_lake_info["location"].unique()
@@ -245,51 +246,115 @@ for location in locations:
     folium.GeoJson(
         sachsen_gdf[sachsen_gdf["Region"] == location],
         name=f"{location}",
-        style_function=lambda feature: { 
+        style_function = lambda feature: { 
             "fillColor": "lightblue",
             "color": "grey",
             "weight": 1,
             "fillOpacity": 0.4
         },
-        highlight_function=lambda feature: {
+        highlight_function = lambda feature: {
             "weight": 1,
             "color": "black",
             "fillOpacity": 0.6
         },
-        tooltip=folium.GeoJsonTooltip(fields=["Region"])
+        tooltip = folium.GeoJsonTooltip(fields = ["Region"])
     ).add_to(m)
 
 # folium.GeoJson(
     # sachsen_gdf,
-    # name="Sachsen",
-    # style_function=lambda feature: {
+    # name = "Sachsen",
+    # style_function = lambda feature: {
         # "fillColor": "lightblue",
         # "color": "grey",
         # "weight": 2,
         # "fillOpacity": 0
     # },
-    # tooltip=folium.GeoJsonTooltip(fields=["Region"])
+    # tooltip = folium.GeoJsonTooltip(fields=["Region"])
 # ).add_to(m)
 
 def set_weather_code(code):
     code = str(code)
     for _, row in weather_codes.iterrows():
-        if code in row["codes"].split(","):
-            return row["svg"]
+        if code in row["code"].split(","):
+            return row["icon"]
     # if not found return cloud with question mark
     return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-question-fill" viewBox="0 0 16 16"> <path d="M5.933.87a2.89 2.89 0 0 1 4.134 0l.622.638.89-.011a2.89 2.89 0 0 1 2.924 2.924l-.01.89.636.622a2.89 2.89 0 0 1 0 4.134l-.637.622.011.89a2.89 2.89 0 0 1-2.924 2.924l-.89-.01-.622.636a2.89 2.89 0 0 1-4.134 0l-.622-.637-.89.011a2.89 2.89 0 0 1-2.924-2.924l.01-.89-.636-.622a2.89 2.89 0 0 1 0-4.134l.637-.622-.011-.89a2.89 2.89 0 0 1 2.924-2.924l.89.01zM7.002 11a1 1 0 1 0 2 0 1 1 0 0 0-2 0m1.602-2.027c.04-.534.198-.815.846-1.26.674-.475 1.05-1.09 1.05-1.986 0-1.325-.92-2.227-2.262-2.227-1.02 0-1.792.492-2.1 1.29A1.7 1.7 0 0 0 6 5.48c0 .393.203.64.545.64.272 0 .455-.147.564-.51.158-.592.525-.915 1.074-.915.61 0 1.03.446 1.03 1.084 0 .563-.208.885-.822 1.325-.619.433-.926.914-.926 1.64v.111c0 .428.208.745.585.745.336 0 .504-.24.554-.627"/></svg>'
+
+
+# Weather codes floating button
+table_html = '<table border="1" style="border-collapse:collapse; width:100%;">'
+# table_html += '<tr><th>Code</th><th>Description</th></tr>'
+for _, row in weather_codes.iterrows():
+    table_html += f'<tr><td>{row["icon"]}</td><td>{row["description"]}</td></tr>'
+table_html += '</table>'
+html = f"""
+<div id="floatingButton" style="
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 9999;
+">
+    <button style="
+        background-color:#0099ff;
+        color:white;
+        border:none;
+        padding:8px 12px;
+        border-radius:5px;
+        font-weight:bold;
+        cursor:pointer;
+    " onclick="
+        var popup = document.getElementById('floatingPopup');
+        popup.style.display = (popup.style.display === 'none' || popup.style.display === '') ? 'block' : 'none';
+    ">
+        List weather codes
+    </button>
+</div>
+
+<div id="floatingPopup" style="
+    display:none;
+    position: fixed;
+    top: 50px;
+    right: 10px;
+    z-index: 9999;
+    background-color:white;
+    border:1px solid #0099ff;
+    padding:10px;
+    border-radius:5px;
+    box-shadow:2px 2px 5px rgba(0,0,0,0.3);
+    max-width:500px;
+">
+    <div style="float:right;">
+        <button onclick="document.getElementById('floatingPopup').style.display='none';"
+                style="
+                    background:none;
+                    border:none;
+                    font-weight:bold;
+                    font-size:16px;
+                    cursor:pointer;
+                    color:#0099ff;
+                ">
+            ✖
+        </button>
+    </div>
+    <h3>Weather Codes</h3>
+    {table_html}
+</div>
+"""
+floating_element = Element(html)
+m.get_root().html.add_child(floating_element)
+
 
 # Add lakes to map
 for index, row in lakes_gdf.iterrows():
     folium.CircleMarker(
-        location=[row["lat"], row["lon"]],
-        radius=12,
-        color=row["color"],
-        fill=True,
-        fill_color=row["color"],
-        background_color=row["color"],
-        fill_opacity=0.7,
-        popup=f"""
+        location = [row["lat"], row["lon"]],
+        radius = 12,
+        color = row["color"],
+        fill = True,
+        fill_color = row["color"],
+        background_color = row["color"],
+        fill_opacity = 0.7,
+        popup = f"""
         <div style='display:block; min-width:340px; font-size:12px;'>
         <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
           <tr>
@@ -302,7 +367,7 @@ for index, row in lakes_gdf.iterrows():
               <td>{row["max_temp"]}°C</td>
           </tr>
           <tr>
-              <td><b>Weather code</b></td>
+              <td><b>Daily weather code</b></td>
               <td>{set_weather_code(row["w_code"])}</td>
           </tr>
           <tr>
@@ -344,10 +409,10 @@ for index, row in lakes_gdf.iterrows():
       </table>
         </div>
         """,
-        tooltip=row["name"]
+        tooltip = row["name"]
     ).add_to(m)
-folium.LayerControl().add_to(m)
 
+#folium.LayerControl().add_to(m)
 
 top_legend = '''
 <div style="
@@ -364,7 +429,6 @@ top_legend = '''
      overflow: hidden;
      border-radius: 8px;
      #background-color: #000;
-     
 ">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"
       style="top:0; z-index=100; position:absolute; width:100%; height:100%; left:0"
@@ -384,7 +448,7 @@ footer = f"""
     top: 20px
     left: 0;
     width: 100%;
-    height: 40px;
+    height: 45px;
     background-color: #0099ff;
     z-index: 9999;
     font-size: 16px;
@@ -413,15 +477,15 @@ position: fixed;
 ">
     <div>
         <b>Sachsen Lake Monitoring Dashboard </b><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#0099ff" class="bi bi-droplet-fill" viewBox="0 0 16 16"><path d="M8 16a6 6 0 0 0 6-6c0-1.655-1.122-2.904-2.432-4.362C10.254 4.176 8.75 2.503 8 0c0 0-6 5.686-6 10a6 6 0 0 0 6 6M6.646 4.646l.708.708c-.29.29-1.128 1.311-1.907 2.87l-.894-.448c.82-1.641 1.717-2.753 2.093-3.13"/></svg> 
-         # of lakes listed: {len(df_lake_info)} <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#0099ff" class="bi bi-droplet-fill" viewBox="0 0 16 16"><path d="M8 16a6 6 0 0 0 6-6c0-1.655-1.122-2.904-2.432-4.362C10.254 4.176 8.75 2.503 8 0c0 0-6 5.686-6 10a6 6 0 0 0 6 6M6.646 4.646l.708.708c-.29.29-1.128 1.311-1.907 2.87l-.894-.448c.82-1.641 1.717-2.753 2.093-3.13"/></svg> 
-         Last updated at {datetime.now().strftime("%Y-%m-%d %H:%M")} 
+        # of lakes listed: <b>{len(df_lake_info)}</b> <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#0099ff" class="bi bi-droplet-fill" viewBox="0 0 16 16"><path d="M8 16a6 6 0 0 0 6-6c0-1.655-1.122-2.904-2.432-4.362C10.254 4.176 8.75 2.503 8 0c0 0-6 5.686-6 10a6 6 0 0 0 6 6M6.646 4.646l.708.708c-.29.29-1.128 1.311-1.907 2.87l-.894-.448c.82-1.641 1.717-2.753 2.093-3.13"/></svg> 
+        Updated on {datetime.now().strftime("%Y-%m-%d")} at {datetime.now().strftime("%H:%M")}
     </div>
     <div>
-        Maintained by <a href="https://github.com/manquintana/" target="_blank">jevi</a>
+        Maintained by <a href="https://github.com/manquintana/" target="_blank">mqu</a>
     </div>
 </div>
 """
 m.get_root().html.add_child(Element(footer))
 
-#m #map
-m.save("index.html") #or save html
+#m.map
+m.save("index.html")
