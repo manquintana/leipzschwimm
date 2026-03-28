@@ -60,16 +60,20 @@ def get_weather_batch(lakes_df):
     return weather_data
 
 
-def scrap_lake_web(df_lake_info, lake):
+def scrap_lake_web(lake, weather_data, lakes_dict_list):
     snippet_url = f"https://www.gesunde.sachsen.de/lua/badegewaesser/{lake['id']}-de-content.snippet"
     print(f"> retrieving info for lake: {lake['id']}")
     data = requests.get(snippet_url).text
     soup = BeautifulSoup(data, "html.parser")
 
     tables = soup.find_all("table")
-    if len(tables) > 1: # usually is 2 tables (Vorort and Labor) but sometimes they have multiple extraction points, which makes thing hard to scrap... I will take the first two tables in this case
 
-        # get data from table 1 (Observations)
+    # retrieve temp and weather code for this lake
+    key = (lake["lat"], lake["lon"])
+    max_temp, w_code = weather_data[key]
+
+    if len(tables) > 1:
+        # table 1: observations
         obs_data = []
         for row in tables[0].tbody.find_all("tr"):
             cols = row.find_all("td")
@@ -80,7 +84,7 @@ def scrap_lake_web(df_lake_info, lake):
             })
         obs_df = pd.DataFrame(obs_data)
 
-        # get data from table 2 (Laboratory)
+        # table 2: laboratory
         lab_data = []
         for row in tables[1].tbody.find_all("tr"):
             cols = row.find_all("td")
@@ -91,16 +95,13 @@ def scrap_lake_web(df_lake_info, lake):
                 "micro": cols[3].text.strip()
             })
         lab_df = pd.DataFrame(lab_data)
-        
-        # retrieve temp and weather code for this lake
-        key = (lake["lat"], lake["lon"])
-        max_temp, w_code = weather_data[key]
 
-        #performance improvement, i will merge this two small df and keep only latest Date before appending to df_lake_info
+        # merge tables and take latest date
         merged = pd.merge(obs_df, lab_df, on="date", how="inner")
         merged["date"] = pd.to_datetime(merged["date"], dayfirst=True)
         latest = merged.sort_values("date").iloc[-1]
-        df_lake_info.loc[len(df_lake_info)] = {
+
+        lakes_dict_list.append({
             "id": lake["id"],
             "name": lake["name"],
             "lat": lake["lat"],
@@ -114,34 +115,27 @@ def scrap_lake_web(df_lake_info, lake):
             "micro": latest["micro"],
             "max_temp": max_temp,
             "w_code": w_code
-        }
+        })
     else:
-        error_code = f" > information not available for lake {lake['name']}! the web has no data: {snippet_url}"
-        print(error_code)
-
-        # retrieve temp and weather code for this lake
-        key = (lake["lat"], lake["lon"])
-        max_temp, w_code = weather_data[key]
-
-        # max_temp, w_code = get_weather(lake["lat"], lake["lon"]) # anyway i retrieve the weather data
-        df_lake_info.loc[len(df_lake_info)] = {
+        print(f" > information not available for lake {lake['name']}! URL: {snippet_url}")
+        lakes_dict_list.append({
             "id": lake["id"],
             "name": lake["name"],
             "lat": lake["lat"],
             "lon": lake["lon"],
             "location": lake["location"],
             "date": pd.NaT,
-            "abn": "no-data", #pd.NA,
-            "sight": "no-data", #pd.NA,
-            "entero": "no-data", #pd.NA,
-            "coli": "no-data", #pd.NA,
+            "abn": "no-data",
+            "sight": "no-data",
+            "entero": "no-data",
+            "coli": "no-data",
             "micro": "no-data",
             "max_temp": max_temp,
             "w_code": w_code
-        }
+        })
 
     print(f">> retrieved info for lake: {lake['name']}")
-    return df_lake_info
+    return lakes_dict_list
 
 
 df_lake_info = pd.DataFrame(columns=["id", "name", "lat", "lon", "location", "date", "abn", "sight", "entero", "coli", "micro", "max_temp", "w_code"]).astype({
@@ -161,10 +155,14 @@ df_lake_info = pd.DataFrame(columns=["id", "name", "lat", "lon", "location", "da
 })
 
 weather_data = get_weather_batch(swim_lakes)
-        
-for index, lake in swim_lakes.iterrows():
-    df_lake_info = scrap_lake_web(df_lake_info, lake)
 
+lakes_dict_list = []
+for index, lake in swim_lakes.iterrows():
+    lakes_dict_list = scrap_lake_web(lake, weather_data, lakes_dict_list)
+
+df_lake_info = pd.DataFrame(lakes_dict_list)
+
+print(df_lake_info)
 print("Starting data preparation and mapping...")
 
 
