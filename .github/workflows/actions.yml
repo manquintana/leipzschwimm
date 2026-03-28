@@ -24,16 +24,22 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: requirements.txt
-          
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install Python packages
         run: |
           pip install -r requirements.txt
 
       - name: Execute index.py
         run: python index.py
-        
+
       - name: Commit changes
         run: |
           git config user.email "action@github.com"
