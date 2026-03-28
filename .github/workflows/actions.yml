@@ -40,15 +40,10 @@ jobs:
       - name: Execute index.py
         run: python index.py
 
-      - name: Commit changes
+      - name: Commit + Push changes
         run: |
           git config user.email "action@github.com"
           git config user.name "GitHub Action"
           git add -A
           git commit -m "Update logs" || echo "No changes to commit"
-
-      - name: Pull and push changes
-        run: |
-          git fetch origin main
-          git reset --hard origin/main
-          git push origin main
+          git push origin main --force
