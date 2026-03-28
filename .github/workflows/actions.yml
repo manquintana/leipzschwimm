@@ -12,7 +12,7 @@ concurrency: # Prevent overlapping runs
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 3
 
     steps:
       - name: Checkout repository
@@ -24,10 +24,11 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
           
       - name: Install Python packages
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Execute index.py
