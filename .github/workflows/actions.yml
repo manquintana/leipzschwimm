@@ -49,5 +49,6 @@ jobs:
 
       - name: Pull and push changes
         run: |
-          git pull origin main
+          git fetch origin main
+          git reset --hard origin/main
           git push origin main
