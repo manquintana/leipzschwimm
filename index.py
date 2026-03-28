@@ -28,34 +28,36 @@ weather_codes = pd.read_csv("https://raw.githubusercontent.com/manquintana/leipz
 DATA ADQUISITION
 ################
 """
-def get_weather(latitude, longitude):
-    # Setup the Open-Meteo API client with cache and retry on error
-    cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
-    retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
-    openmeteo = openmeteo_requests.Client(session = retry_session)
+
+def get_weather_batch(lakes_df):
+    cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
+    retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
+    openmeteo = openmeteo_requests.Client(session=retry_session)
 
     url = "https://api.open-meteo.com/v1/forecast"
+
+    # only 1 request to get all lakes info
+    latitudes = lakes_df["lat"].tolist()
+    longitudes = lakes_df["lon"].tolist()
     params = {
-    	"latitude": latitude,
-    	"longitude": longitude,
-    	"daily": ["temperature_2m_max", "weather_code"],
-    	"timezone": "Europe/Berlin",
-    	"forecast_days": 1,
+        "latitude": latitudes,
+        "longitude": longitudes,
+        "daily": ["temperature_2m_max", "weather_code"],
+        "timezone": "Europe/Berlin",
+        "forecast_days": 1,
     }
-    responses = openmeteo.weather_api(url, params = params)
 
-    # Process first location. Add a for-loop for multiple locations or weather models
-    response = responses[0]
+    responses = openmeteo.weather_api(url, params=params)
+    weather_data = {}
 
-    # Process daily data. The order of variables needs to be the same as requested.
-    daily = response.Daily()
-    daily_temperature_2m_max = daily.Variables(0).ValuesAsNumpy()
-    daily_weather_code = daily.Variables(1).ValuesAsNumpy()
-    max_temp = int(daily_temperature_2m_max[0])
-    w_code = int(daily_weather_code[0])
+    for i, response in enumerate(responses):
+        daily = response.Daily()
+        max_temp = int(daily.Variables(0).ValuesAsNumpy()[0])
+        w_code = int(daily.Variables(1).ValuesAsNumpy()[0])
+        key = (latitudes[i], longitudes[i])
+        weather_data[key] = (max_temp, w_code)
 
-    print(f"Lat: {latitude} / Lon: {longitude} / Max Temp(°C): {max_temp} / Weather code: {w_code}")
-    return max_temp, w_code
+    return weather_data
 
 
 def scrap_lake_web(df_lake_info, lake):
@@ -89,9 +91,10 @@ def scrap_lake_web(df_lake_info, lake):
                 "micro": cols[3].text.strip()
             })
         lab_df = pd.DataFrame(lab_data)
-
-        # get meteorology data from open-meteo
-        max_temp, w_code = get_weather(lake["lat"], lake["lon"])
+        
+        # retrieve temp and weather code for this lake
+        key = (lake["lat"], lake["lon"])
+        max_temp, w_code = weather_data[key]
 
         #performance improvement, i will merge this two small df and keep only latest Date before appending to df_lake_info
         merged = pd.merge(obs_df, lab_df, on="date", how="inner")
@@ -115,7 +118,12 @@ def scrap_lake_web(df_lake_info, lake):
     else:
         error_code = f" > information not available for lake {lake['name']}! the web has no data: {snippet_url}"
         print(error_code)
-        max_temp, w_code = get_weather(lake["lat"], lake["lon"]) # anyway i retrieve the weather data
+
+        # retrieve temp and weather code for this lake
+        key = (lake["lat"], lake["lon"])
+        max_temp, w_code = weather_data[key]
+
+        # max_temp, w_code = get_weather(lake["lat"], lake["lon"]) # anyway i retrieve the weather data
         df_lake_info.loc[len(df_lake_info)] = {
             "id": lake["id"],
             "name": lake["name"],
@@ -151,6 +159,9 @@ df_lake_info = pd.DataFrame(columns=["id", "name", "lat", "lon", "location", "da
     "max_temp": "int",
     "w_code": "int"
 })
+
+weather_data = get_weather_batch(swim_lakes)
+        
 for index, lake in swim_lakes.iterrows():
     df_lake_info = scrap_lake_web(df_lake_info, lake)
 
