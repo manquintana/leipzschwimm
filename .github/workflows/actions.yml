@@ -40,10 +40,13 @@ jobs:
       - name: Execute index.py
         run: python -u index.py
 
-      - name: Configure Git and commit changes
+      - name: Configure Git
         run: |
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
+
+      - name: Commit changes
+        run: |
           git pull
           git add index.html
           git diff-index --quiet HEAD || git commit -m "Update logs"
