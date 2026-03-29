@@ -38,7 +38,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Execute index.py
-        run: python index.py
+        run: python -u index.py
 
       - name: Commit + Push changes
         run: |
