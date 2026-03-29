@@ -12,7 +12,7 @@ concurrency: # Prevent overlapping runs
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 2
 
     steps:
       - name: Checkout repository
@@ -38,7 +38,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Execute index.py
-        run: python3 index.py
+        run: python index.py
 
       - name: Commit + Push changes
         run: |
