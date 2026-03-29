@@ -15,12 +15,11 @@ jobs:
     timeout-minutes: 2
 
     steps:
-    
       - name: Set up Git identity globally
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -45,12 +44,12 @@ jobs:
 
       - name: Execute index.py
         run: python -u index.py
-          
+
       - name: Commit changes
         run: |
           git add index.html
           git diff-index --quiet HEAD || git commit -m "Update logs"
-    
+
       - name: Push changes
         uses: ad-m/github-push-action@v0.6.0
         with:
