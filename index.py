@@ -30,6 +30,7 @@ DATA ADQUISITION
 """
 
 def get_weather_batch(lakes_df):
+    print("> retrieving weather data...")
     cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
     retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
     openmeteo = openmeteo_requests.Client(session=retry_session)
@@ -56,14 +57,23 @@ def get_weather_batch(lakes_df):
         w_code = int(daily.Variables(1).ValuesAsNumpy()[0])
         key = (latitudes[i], longitudes[i])
         weather_data[key] = (max_temp, w_code)
-
+    print(f"Weather data retrieved:\n{weather_data}")
     return weather_data
 
 
 def scrap_lake_web(lake, weather_data, lakes_dict_list):
     snippet_url = f"https://www.gesunde.sachsen.de/lua/badegewaesser/{lake['id']}-de-content.snippet"
     print(f"> retrieving info for lake: {lake['id']}")
-    data = requests.get(snippet_url).text
+
+    # fixed headers for github ci
+    headers = {
+        "User-Agent":   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+        "Connection": "keep-alive",
+    }
+    data = requests.get(snippet_url, headers = headers, timeout = 10).text
     soup = BeautifulSoup(data, "html.parser")
 
     tables = soup.find_all("table")
