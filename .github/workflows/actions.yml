@@ -40,12 +40,14 @@ jobs:
       - name: Execute index.py
         run: python -u index.py
 
-      - name: Commit changes
+      - name: Configure Git and commit changes
         run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
           git pull
           git add index.html
           git diff-index --quiet HEAD || git commit -m "Update logs"
-
+    
       - name: Push changes
         uses: ad-m/github-push-action@v0.6.0
         with:
