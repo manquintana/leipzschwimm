@@ -47,6 +47,7 @@ jobs:
 
       - name: Commit changes
         run: |
+          git pull --rebase
           git add index.html
           git diff-index --quiet HEAD || git commit -m "Update logs"
 
