@@ -47,12 +47,10 @@ jobs:
 
       - name: Commit changes
         run: |
-          git pull --rebase
           git add index.html
-          git diff-index --quiet HEAD || git commit -m "Update logs"
+          git commit -m "auto update" || echo "No changes"
 
-      - name: Push changes
-        uses: ad-m/github-push-action@v0.6.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
+      - name: Sync + Push safely
+        run: |
+          git pull --rebase origin main
+          git push origin main
