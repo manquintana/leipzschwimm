@@ -45,12 +45,8 @@ jobs:
       - name: Execute index.py
         run: python -u index.py
 
-      - name: Commit changes
+      - name: Commit and push
         run: |
           git add .
           git commit -m "auto update" || echo "No changes"
-
-      - name: Sync + Push safely
-        run: |
-          git pull --rebase origin main
-          git push origin main
+          git push origin main --force
