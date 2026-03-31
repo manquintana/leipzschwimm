@@ -47,7 +47,7 @@ jobs:
 
       - name: Commit changes
         run: |
-          git add index.html
+          git add .
           git commit -m "auto update" || echo "No changes"
 
       - name: Sync + Push safely
