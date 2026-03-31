@@ -73,8 +73,28 @@ def scrap_lake_web(lake, weather_data, lakes_dict_list):
         "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
         "Connection": "keep-alive",
     }
-    data = requests.get(snippet_url, headers = headers, timeout = 10).text
-    soup = BeautifulSoup(data, "html.parser")
+    try:
+        data = requests.get(snippet_url, headers = headers, timeout = 15).text
+        soup = BeautifulSoup(data, "html.parser")
+
+    except requests.exceptions.ReadTimeout:
+        print(f"Timeout for lake {lake['name']}")
+        lakes_dict_list.append({
+            "id": lake["id"],
+            "name": lake["name"],
+            "lat": lake["lat"],
+            "lon": lake["lon"],
+            "location": lake["location"],
+            "date": pd.NaT,
+            "abn": "no-data",
+            "sight": "no-data",
+            "entero": "no-data",
+            "coli": "no-data",
+            "micro": "no-data",
+            "max_temp": max_temp,
+            "w_code": w_code
+        })
+        return lakes_dict_list
 
     tables = soup.find_all("table")
 
