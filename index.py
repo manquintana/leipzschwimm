@@ -65,6 +65,10 @@ def scrap_lake_web(lake, weather_data, lakes_dict_list):
     snippet_url = f"https://www.gesunde.sachsen.de/lua/badegewaesser/{lake['id']}-de-content.snippet"
     print(f"> retrieving info for lake: {lake['id']}")
 
+    # retrieve temp and weather code for this lake
+    key = (lake["lat"], lake["lon"])
+    max_temp, w_code = weather_data[key]
+    
     # fixed headers for github ci
     headers = {
         "User-Agent":   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -97,10 +101,6 @@ def scrap_lake_web(lake, weather_data, lakes_dict_list):
         return lakes_dict_list
 
     tables = soup.find_all("table")
-
-    # retrieve temp and weather code for this lake
-    key = (lake["lat"], lake["lon"])
-    max_temp, w_code = weather_data[key]
 
     if len(tables) > 1:
         # table 1: observations
