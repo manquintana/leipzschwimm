@@ -3,7 +3,7 @@
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, time
 import geopandas as gpd
 from branca.element import Element
 
@@ -61,7 +61,7 @@ def get_weather_batch(lakes_df):
     return weather_data
 
 
-def scrap_lake_web(lake, weather_data, lakes_dict_list):
+def scrap_lake_web(lake, weather_data, lakes_dict_list, max_attemps = 2):
     snippet_url = f"https://www.gesunde.sachsen.de/lua/badegewaesser/{lake['id']}-de-content.snippet"
     print(f"> retrieving info for lake: {lake['id']}")
 
@@ -77,31 +77,36 @@ def scrap_lake_web(lake, weather_data, lakes_dict_list):
         "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
         "Connection": "keep-alive",
     }
-    try:
-        data = requests.get(snippet_url, headers = headers, timeout = 15).text
-        soup = BeautifulSoup(data, "html.parser")
-
-    except requests.exceptions.ReadTimeout:
-        print(f"Timeout for lake {lake['name']}")
-        lakes_dict_list.append({
-            "id": lake["id"],
-            "name": lake["name"],
-            "lat": lake["lat"],
-            "lon": lake["lon"],
-            "location": lake["location"],
-            "date": pd.NaT,
-            "abn": "no-data",
-            "sight": "no-data",
-            "entero": "no-data",
-            "coli": "no-data",
-            "micro": "no-data",
-            "max_temp": max_temp,
-            "w_code": w_code
-        })
-        return lakes_dict_list
+    
+    for attemp in range(0, max_attemps + 1):
+        try:
+            data = requests.get(snippet_url, headers = headers, timeout = 15).text
+            soup = BeautifulSoup(data, "html.parser")
+            break
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+            if attemp < max_attemps:
+                print(f"Exception for lake {lake['name']}: {e}")    
+                time.sleep(5)
+            else:
+                print(f"All {max_attemps + 1} failed for lake {lake['name']}")
+                lakes_dict_list.append({
+                    "id": lake["id"],
+                    "name": lake["name"],
+                    "lat": lake["lat"],
+                    "lon": lake["lon"],
+                    "location": lake["location"],
+                    "date": pd.NaT,
+                    "abn": "no-data",
+                    "sight": "no-data",
+                    "entero": "no-data",
+                    "coli": "no-data",
+                    "micro": "no-data",
+                    "max_temp": max_temp,
+                    "w_code": w_code
+                })
+                return lakes_dict_list
 
     tables = soup.find_all("table")
-
     if len(tables) > 1:
         # table 1: observations
         obs_data = []
