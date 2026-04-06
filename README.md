@@ -1,10 +1,14 @@
-# Sachschwimm
-Web scraper to display the Water Quality of the lakes in Sachsen into an interactive Folium map.
+# Sachschwimm 🏊
+Web scraper to display the Water Quality of the lakes in Sachsen into an interactive Folium map. Github CI/CD is updating the map automatically everyday.
 
-## 🚀 Sources
+## Sources
 - Water sampling: Official authority for wasser quality (https://www.gesunde.sachsen.de/badegewaesser.html#EINSTUFUNG)
 - Weather forecast: Open-Meteo API
 - Map linking: Google Maps
+
+Check it before swimming just by clicking on the Map Preview, or deploy your own by following Installation instructions
+[![Map Preview](https://manquintana.github.io/leipzschwimm/render/preview.png)](https://manquintana.github.io/leipzschwimm/index.html)
+NOTE:  Right now (april 2026) all the data is outdated because the sampling takes place only during the summer months.
 
 ## 📦 Installation
 - Install dependencies `pip install -r requirements.txt`
@@ -18,7 +22,3 @@ Web scraper to display the Water Quality of the lakes in Sachsen into an interac
 ## 🤝 Contributing
 Feel free to share your ideas or add new features :)
 
-## 🛠 Usage
-Check it before swimming just by clicking on the Map Preview
-[![Map Preview](https://manquintana.github.io/leipzschwimm/render/preview.png)](https://manquintana.github.io/leipzschwimm/index.html)
-NOTE:  Right now (march 2026) all the data is outdated because the sampling takes place only during the summer months.
