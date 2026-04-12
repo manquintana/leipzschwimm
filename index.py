@@ -69,7 +69,7 @@ def scrap_lake_web(lake, weather_data, lakes_dict_list, max_attemps = 2):
     # retrieve temp and weather code for this lake
     key = (lake["lat"], lake["lon"])
     max_temp, w_code = weather_data[key]
-    
+
     # fixed headers for github ci
     headers = {
         "User-Agent":   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -78,7 +78,7 @@ def scrap_lake_web(lake, weather_data, lakes_dict_list, max_attemps = 2):
         "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
         "Connection": "keep-alive",
     }
-    
+
     for attemp in range(0, max_attemps + 1):
         try:
             data = requests.get(snippet_url, headers = headers, timeout = 15).text
@@ -86,7 +86,7 @@ def scrap_lake_web(lake, weather_data, lakes_dict_list, max_attemps = 2):
             break
         except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
             if attemp < max_attemps:
-                print(f"Exception for lake {lake['name']}: {e}")    
+                print(f"Attempt {attemp} of {max_attemps} -> Exception for lake {lake['name']}: {e}")
                 time.sleep(5)
             else:
                 print(f"All {max_attemps + 1} failed for lake {lake['name']}")
