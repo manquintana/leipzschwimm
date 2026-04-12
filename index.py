@@ -3,7 +3,8 @@
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
-from datetime import datetime, time
+from datetime import datetime
+import time
 import geopandas as gpd
 from branca.element import Element
 
